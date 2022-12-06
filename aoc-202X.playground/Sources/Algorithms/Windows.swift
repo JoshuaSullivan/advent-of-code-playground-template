@@ -10,80 +10,123 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// slidingWindows(ofCount:)
+// windows(ofCount:)
 //===----------------------------------------------------------------------===//
 
 extension Collection {
-  /// A collection for all contiguous windows of length size, the
-  /// windows overlap.
+  /// Returns a collection of all the overlapping slices of a given size.
   ///
-  /// - Complexity: O(*1*) if the collection conforms to
-  /// `RandomAccessCollection`, otherwise O(*k*) where `k` is `count`.
-  /// Access to the next window is O(*1*).
+  /// Use this method to iterate over overlapping subsequences of this
+  /// collection. This example prints every five character substring of `str`:
+  ///
+  ///     let str = "Hello, world!"
+  ///     for substring in str.windows(ofCount: 5) {
+  ///         print(substring)
+  ///     }
+  ///     // "Hello"
+  ///     // "ello,"
+  ///     // "llo, "
+  ///     // "lo, W"
+  ///     // ...
+  ///     // "orld!"
   ///
   /// - Parameter count: The number of elements in each window subsequence.
+  /// - Returns: A collection of subsequences of this collection, each with
+  ///   length `count`. If this collection is shorter than `count`, the
+  ///   resulting collection is empty.
   ///
-  /// - Returns: If the collection is shorter than `size` the resulting
-  /// SlidingWindows collection will be empty.
-  public func slidingWindows(ofCount count: Int) -> SlidingWindows<Self> {
-    SlidingWindows(base: self, size: count)
+  /// - Complexity: O(1) if the collection conforms to
+  ///   `RandomAccessCollection`, otherwise O(*k*) where `k` is `count`.
+  ///   Access to successive windows is O(1).
+  @inlinable
+  public func windows(ofCount count: Int) -> WindowsOfCountCollection<Self> {
+    WindowsOfCountCollection(base: self, windowSize: count)
   }
 }
 
-public struct SlidingWindows<Base: Collection> {
+/// A collection wrapper that presents a sliding window over the elements of
+/// a collection.
+public struct WindowsOfCountCollection<Base: Collection> {
+  @usableFromInline
+  internal let base: Base
   
-  public let base: Base
-  public let size: Int
+  @usableFromInline
+  internal let windowSize: Int
   
-  private var firstUpperBound: Base.Index?
+  @usableFromInline
+  internal var endOfFirstWindow: Base.Index?
 
-  init(base: Base, size: Int) {
-    precondition(size > 0, "SlidingWindows size must be greater than zero")
+  @inlinable
+  internal init(base: Base, windowSize: Int) {
+    precondition(windowSize > 0, "Windows size must be greater than zero")
     self.base = base
-    self.size = size
-    self.firstUpperBound = base.index(base.startIndex, offsetBy: size, limitedBy: base.endIndex)
+    self.windowSize = windowSize
+    self.endOfFirstWindow =
+      base.index(base.startIndex, offsetBy: windowSize, limitedBy: base.endIndex)
   }
 }
 
-extension SlidingWindows: Collection {
-  
+extension WindowsOfCountCollection: Collection {
+  /// A position in a `WindowsOfCountCollection` instance.
   public struct Index: Comparable {
+    @usableFromInline
     internal var lowerBound: Base.Index
+    
+    @usableFromInline
     internal var upperBound: Base.Index
+    
+    @inlinable
+    internal init(lowerBound: Base.Index, upperBound: Base.Index) {
+      self.lowerBound = lowerBound
+      self.upperBound = upperBound
+    }
+    
+    @inlinable
     public static func == (lhs: Index, rhs: Index) -> Bool {
       lhs.lowerBound == rhs.lowerBound
     }
+    
+    @inlinable
     public static func < (lhs: Index, rhs: Index) -> Bool {
       lhs.lowerBound < rhs.lowerBound
     }
   }
   
+  @inlinable
   public var startIndex: Index {
-    if let upperBound = firstUpperBound {
+    if let upperBound = endOfFirstWindow {
       return Index(lowerBound: base.startIndex, upperBound: upperBound)
     } else {
       return endIndex
     }
   }
   
+  @inlinable
   public var endIndex: Index {
     Index(lowerBound: base.endIndex, upperBound: base.endIndex)
   }
   
+  @inlinable
   public subscript(index: Index) -> Base.SubSequence {
-    precondition(index.lowerBound != index.upperBound, "SlidingWindows index is out of range")
+    precondition(
+      index.lowerBound != index.upperBound,
+      "Windows index is out of range")
     return base[index.lowerBound..<index.upperBound]
   }
   
+  @inlinable
   public func index(after index: Index) -> Index {
-    precondition(index < endIndex, "Advancing past end index")
+    precondition(index != endIndex, "Advancing past end index")
     guard index.upperBound < base.endIndex else { return endIndex }
-    return Index(
-      lowerBound: base.index(after: index.lowerBound),
-      upperBound: base.index(after: index.upperBound)
-    )
+    
+    let lowerBound = windowSize == 1
+      ? index.upperBound
+      : base.index(after: index.lowerBound)
+    let upperBound = base.index(after: index.upperBound)
+    return Index(lowerBound: lowerBound, upperBound: upperBound)
   }
   
+  @inlinable
   public func index(_ i: Index, offsetBy distance: Int) -> Index {
     guard distance != 0 else { return i }
     
@@ -92,6 +135,7 @@ extension SlidingWindows: Collection {
       : offsetBackward(i, by: -distance)
   }
   
+  @inlinable
   public func index(
     _ i: Index,
     offsetBy distance: Int,
@@ -111,19 +155,22 @@ extension SlidingWindows: Collection {
     }
   }
   
-  private func offsetForward(_ i: Index, by distance: Int) -> Index {
+  @inlinable
+  internal func offsetForward(_ i: Index, by distance: Int) -> Index {
     guard let index = offsetForward(i, by: distance, limitedBy: endIndex)
       else { fatalError("Index is out of bounds") }
     return index
   }
   
-  private func offsetBackward(_ i: Index, by distance: Int) -> Index {
+  @inlinable
+  internal func offsetBackward(_ i: Index, by distance: Int) -> Index {
     guard let index = offsetBackward(i, by: distance, limitedBy: startIndex)
       else { fatalError("Index is out of bounds") }
     return index
   }
   
-  private func offsetForward(
+  @inlinable
+  internal func offsetForward(
     _ i: Index, by distance: Int, limitedBy limit: Index
   ) -> Index? {
     assert(distance > 0)
@@ -140,7 +187,7 @@ extension SlidingWindows: Collection {
     //                     |> > >|>|   or                 |> > >|
     // output: [x x x x x|x x x x x]        [x x x x x x x x x x]  (`endIndex`)
     
-    if distance >= size {
+    if distance >= windowSize {
       // Avoid traversing `self[i.lowerBound..<i.upperBound]` when the lower
       // bound of the output is greater than or equal to the upper bound of the
       // input.
@@ -152,11 +199,11 @@ extension SlidingWindows: Collection {
       guard limit.lowerBound >= i.upperBound,
             let lowerBound = base.index(
               i.upperBound,
-              offsetBy: distance - size,
+              offsetBy: distance - windowSize,
               limitedBy: limit.lowerBound),
             let indexBeforeUpperBound = base.index(
               lowerBound,
-              offsetBy: size - 1,
+              offsetBy: windowSize - 1,
               limitedBy: limit.upperBound)
       else { return nil }
       
@@ -193,7 +240,8 @@ extension SlidingWindows: Collection {
     }
   }
   
-  private func offsetBackward(
+  @inlinable
+  internal func offsetBackward(
       _ i: Index, by distance: Int, limitedBy limit: Index
     ) -> Index? {
     assert(distance > 0)
@@ -216,9 +264,9 @@ extension SlidingWindows: Collection {
       else { return nil }
       
       return Index(
-        lowerBound: base.index(upperBound, offsetBy: -size),
+        lowerBound: base.index(upperBound, offsetBy: -windowSize),
         upperBound: upperBound)
-    } else if distance >= size {
+    } else if distance >= windowSize {
       // Avoid traversing `self[i.lowerBound..<i.upperBound]` when the upper
       // bound of the output is less than or equal to the lower bound of the
       // input.
@@ -230,12 +278,12 @@ extension SlidingWindows: Collection {
       guard limit.upperBound <= i.lowerBound,
             let upperBound = base.index(
               i.lowerBound,
-              offsetBy: -(distance - size),
+              offsetBy: -(distance - windowSize),
               limitedBy: limit.upperBound)
       else { return nil }
       
       return Index(
-        lowerBound: base.index(upperBound, offsetBy: -size),
+        lowerBound: base.index(upperBound, offsetBy: -windowSize),
         upperBound: upperBound)
     } else {
       //  input: [x x x x x|x x x x x x|x]
@@ -254,10 +302,11 @@ extension SlidingWindows: Collection {
     }
   }
   
+  @inlinable
   public func distance(from start: Index, to end: Index) -> Int {
     guard start <= end else { return -distance(from: end, to: start) }
     guard start != end else { return 0 }
-    guard end < endIndex else {
+    guard end != endIndex else {
       // We add 1 here because the index before `endIndex` also has
       // `base.endIndex` as its upper bound.
       return base[start.upperBound...].count + 1
@@ -271,7 +320,7 @@ extension SlidingWindows: Collection {
       //          |- - - -|> >|
       //   end: [x x x x x x x|x x x x|x]
       
-      return size + base[start.upperBound..<end.lowerBound].count
+      return windowSize + base[start.upperBound..<end.lowerBound].count
     } else {
       // start: [x|x x x x x x|x x x x x]
       //          |> > > >|
@@ -282,12 +331,15 @@ extension SlidingWindows: Collection {
   }
 }
 
-extension SlidingWindows: BidirectionalCollection where Base: BidirectionalCollection {
+extension WindowsOfCountCollection: BidirectionalCollection
+  where Base: BidirectionalCollection
+{
+  @inlinable
   public func index(before index: Index) -> Index {
-    precondition(index > startIndex, "Incrementing past start index")
+    precondition(index != startIndex, "Incrementing past start index")
     if index == endIndex {
       return Index(
-        lowerBound: base.index(index.lowerBound, offsetBy: -size),
+        lowerBound: base.index(index.lowerBound, offsetBy: -windowSize),
         upperBound: index.upperBound
       )
     } else {
@@ -299,7 +351,10 @@ extension SlidingWindows: BidirectionalCollection where Base: BidirectionalColle
   }
 }
 
-extension SlidingWindows: RandomAccessCollection where Base: RandomAccessCollection {}
-extension SlidingWindows: Equatable where Base: Equatable {}
-extension SlidingWindows: Hashable where Base: Hashable, Base.Index: Hashable {}
-extension SlidingWindows.Index: Hashable where Base.Index: Hashable {}
+extension WindowsOfCountCollection: RandomAccessCollection
+  where Base: RandomAccessCollection {}
+
+extension WindowsOfCountCollection: LazySequenceProtocol, LazyCollectionProtocol
+  where Base: LazySequenceProtocol {}
+
+extension WindowsOfCountCollection.Index: Hashable where Base.Index: Hashable {}
