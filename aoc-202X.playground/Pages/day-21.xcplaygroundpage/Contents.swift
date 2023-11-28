@@ -1,5 +1,5 @@
 //: # Advent of Code 202X
-//: ### Day 2: TBD
+//: ### Day 21: TBD
 //: [Prev](@prev) <---> [Next](@next)
 
 import Foundation

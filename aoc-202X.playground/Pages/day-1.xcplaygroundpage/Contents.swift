@@ -4,12 +4,9 @@
 
 import Foundation
 
-guard let input = try? DataParser<Int>().parseDoubleNewlineGroupsOfLines(fileName: "input") else {
-    fatalError("Couldn't read file.")
-}
+//: Typically, you'd start by parsing the input into a Swift data structure using the DataParser:
+// let input = try DataParser<Int>().parseLines(fileName: "input")
 
-guard let result = Solver.solve(with: input) else {
-    fatalError("Didn't get a result.")
-}
+//: Then pass the data to the solver, along with any parameterization:
+// let result = Solver.solve(input: input, using: 2)
 
-print("Part 1:", result)
