@@ -88,10 +88,14 @@ public struct DataParser<T: StringInitable> {
     /// Attempt to load the input file from the Resources folder.
     ///
     public func loadDataString(from fileName: String) throws -> String {
-        guard let dataURL = Bundle.main.url(forResource: fileName, withExtension: nil) else {
+        guard  let dataURL = Bundle.main.url(forResource: fileName, withExtension: nil) else {
             throw Error.unableToReadInput
         }
-        return try String(contentsOf: dataURL)
+        let data = try Data(contentsOf: dataURL)
+        guard let str = String(data: data, encoding: .utf8) else {
+            throw Error.unableToReadInput
+        }
+        return str
     }
     
     public func parseCSVWithNil(fileName: String) throws -> [T?] {
