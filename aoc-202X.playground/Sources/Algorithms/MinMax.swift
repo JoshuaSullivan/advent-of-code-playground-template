@@ -125,7 +125,7 @@ extension Sequence {
   /// largest values:
   ///
   ///     let numbers = [7, 1, 6, 2, 8, 3, 9]
-  ///     let smallestThree = numbers.max(count: 3, sortedBy: <)
+  ///     let largestThree = numbers.max(count: 3, sortedBy: <)
   ///     // [7, 8, 9]
   ///
   /// If you need to sort a sequence but only need to access its largest
@@ -197,7 +197,7 @@ extension Sequence where Element: Comparable {
   /// largest values:
   ///
   ///     let numbers = [7, 1, 6, 2, 8, 3, 9]
-  ///     let smallestThree = numbers.max(count: 3)
+  ///     let largestThree = numbers.max(count: 3)
   ///     // [7, 8, 9]
   ///
   /// If you need to sort a sequence but only need to access its largest
@@ -256,13 +256,13 @@ extension Collection {
       """
     )
 
-    // Do nothing if we're prefixing nothing.
-    guard count > 0 else {
-      return []
-    }
-
     // Make sure we are within bounds.
     let prefixCount = Swift.min(count, self.count)
+      
+    // Do nothing if we're prefixing nothing.
+    guard prefixCount > 0 else {
+      return []
+    }
 
     // If we're attempting to prefix more than 10% of the collection, it's
     // faster to sort everything.
@@ -280,7 +280,7 @@ extension Collection {
   /// largest values:
   ///
   ///     let numbers = [7, 1, 6, 2, 8, 3, 9]
-  ///     let smallestThree = numbers.max(count: 3, sortedBy: <)
+  ///     let largestThree = numbers.max(count: 3, sortedBy: <)
   ///     // [7, 8, 9]
   ///
   /// If you need to sort a collection but only need to access its largest
@@ -310,13 +310,13 @@ extension Collection {
       """
     )
 
-    // Do nothing if we're suffixing nothing.
-    guard count > 0 else {
-      return []
-    }
-
     // Make sure we are within bounds.
     let suffixCount = Swift.min(count, self.count)
+      
+    // Do nothing if we're suffixing nothing.
+    guard suffixCount > 0 else {
+      return []
+    }
 
     // If we're attempting to prefix more than 10% of the collection, it's
     // faster to sort everything.
